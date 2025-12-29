@@ -8,6 +8,19 @@ package templates
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
+import (
+	"context"
+
+	"github.com/javaBin/talks-indexer/internal/adapters/auth"
+)
+
+func getUserEmail(ctx context.Context) string {
+	if sess := auth.GetSession(ctx); sess != nil {
+		return sess.Email
+	}
+	return ""
+}
+
 func Layout(title string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -36,13 +49,36 @@ func Layout(title string) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/adapters/web/templates/layout.templ`, Line: 9, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/adapters/web/templates/layout.templ`, Line: 22, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</title><script src=\"https://unpkg.com/htmx.org@2.0.4\"></script><style>\n\t\t\t\tbody {\n\t\t\t\t\tfont-family: system-ui, -apple-system, sans-serif;\n\t\t\t\t\tmax-width: 800px;\n\t\t\t\t\tmargin: 2rem auto;\n\t\t\t\t\tpadding: 0 1rem;\n\t\t\t\t\tbackground-color: #f5f5f5;\n\t\t\t\t}\n\t\t\t\th1 {\n\t\t\t\t\tcolor: #333;\n\t\t\t\t}\n\t\t\t\t.section {\n\t\t\t\t\tmargin-bottom: 1.5rem;\n\t\t\t\t\tpadding: 1.5rem;\n\t\t\t\t\tbackground: white;\n\t\t\t\t\tborder: 1px solid #ddd;\n\t\t\t\t\tborder-radius: 8px;\n\t\t\t\t\tbox-shadow: 0 1px 3px rgba(0,0,0,0.1);\n\t\t\t\t}\n\t\t\t\t.section h2 {\n\t\t\t\t\tmargin-top: 0;\n\t\t\t\t\tcolor: #444;\n\t\t\t\t\tfont-size: 1.25rem;\n\t\t\t\t}\n\t\t\t\t.section p {\n\t\t\t\t\tcolor: #666;\n\t\t\t\t\tmargin-bottom: 1rem;\n\t\t\t\t}\n\t\t\t\tbutton {\n\t\t\t\t\tpadding: 0.5rem 1rem;\n\t\t\t\t\tcursor: pointer;\n\t\t\t\t\tbackground-color: #0066cc;\n\t\t\t\t\tcolor: white;\n\t\t\t\t\tborder: none;\n\t\t\t\t\tborder-radius: 4px;\n\t\t\t\t\tfont-size: 0.9rem;\n\t\t\t\t}\n\t\t\t\tbutton:hover {\n\t\t\t\t\tbackground-color: #0055aa;\n\t\t\t\t}\n\t\t\t\tbutton:disabled {\n\t\t\t\t\tbackground-color: #ccc;\n\t\t\t\t\tcursor: not-allowed;\n\t\t\t\t}\n\t\t\t\tselect, input[type=\"text\"] {\n\t\t\t\t\tpadding: 0.5rem;\n\t\t\t\t\tmin-width: 250px;\n\t\t\t\t\tborder: 1px solid #ccc;\n\t\t\t\t\tborder-radius: 4px;\n\t\t\t\t\tfont-size: 0.9rem;\n\t\t\t\t}\n\t\t\t\t.form-group {\n\t\t\t\t\tdisplay: flex;\n\t\t\t\t\tgap: 0.5rem;\n\t\t\t\t\talign-items: center;\n\t\t\t\t\tflex-wrap: wrap;\n\t\t\t\t}\n\t\t\t\t.result {\n\t\t\t\t\tmargin-top: 1rem;\n\t\t\t\t\tpadding: 0.75rem 1rem;\n\t\t\t\t\tborder-radius: 4px;\n\t\t\t\t}\n\t\t\t\t.success {\n\t\t\t\t\tbackground-color: #d4edda;\n\t\t\t\t\tcolor: #155724;\n\t\t\t\t\tborder: 1px solid #c3e6cb;\n\t\t\t\t}\n\t\t\t\t.error {\n\t\t\t\t\tbackground-color: #f8d7da;\n\t\t\t\t\tcolor: #721c24;\n\t\t\t\t\tborder: 1px solid #f5c6cb;\n\t\t\t\t}\n\t\t\t\t.htmx-request button {\n\t\t\t\t\topacity: 0.6;\n\t\t\t\t}\n\t\t\t\t.htmx-indicator {\n\t\t\t\t\tdisplay: none;\n\t\t\t\t}\n\t\t\t\t.htmx-request .htmx-indicator {\n\t\t\t\t\tdisplay: block;\n\t\t\t\t}\n\t\t\t\t.loading {\n\t\t\t\t\tbackground-color: #fff3cd;\n\t\t\t\t\tcolor: #856404;\n\t\t\t\t\tborder: 1px solid #ffeeba;\n\t\t\t\t}\n\t\t\t</style></head><body>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</title><script src=\"https://unpkg.com/htmx.org@2.0.4\"></script><style>\n\t\t\t\t* {\n\t\t\t\t\tbox-sizing: border-box;\n\t\t\t\t}\n\t\t\t\tbody {\n\t\t\t\t\tfont-family: system-ui, -apple-system, sans-serif;\n\t\t\t\t\tmax-width: 800px;\n\t\t\t\t\tmargin: 0 auto;\n\t\t\t\t\tpadding: 0 1rem;\n\t\t\t\t\tbackground-color: #f5f5f5;\n\t\t\t\t}\n\t\t\t\theader {\n\t\t\t\t\tdisplay: flex;\n\t\t\t\t\tjustify-content: space-between;\n\t\t\t\t\talign-items: center;\n\t\t\t\t\tpadding: 1rem 0;\n\t\t\t\t\tmargin-bottom: 1rem;\n\t\t\t\t\tborder-bottom: 1px solid #ddd;\n\t\t\t\t}\n\t\t\t\theader .user-info {\n\t\t\t\t\tdisplay: flex;\n\t\t\t\t\talign-items: center;\n\t\t\t\t\tgap: 1rem;\n\t\t\t\t\tcolor: #666;\n\t\t\t\t\tfont-size: 0.9rem;\n\t\t\t\t}\n\t\t\t\theader .logout-btn {\n\t\t\t\t\tpadding: 0.4rem 0.8rem;\n\t\t\t\t\tbackground-color: #dc3545;\n\t\t\t\t\tcolor: white;\n\t\t\t\t\tborder: none;\n\t\t\t\t\tborder-radius: 4px;\n\t\t\t\t\tcursor: pointer;\n\t\t\t\t\tfont-size: 0.85rem;\n\t\t\t\t}\n\t\t\t\theader .logout-btn:hover {\n\t\t\t\t\tbackground-color: #c82333;\n\t\t\t\t}\n\t\t\t\th1 {\n\t\t\t\t\tcolor: #333;\n\t\t\t\t\tmargin: 0;\n\t\t\t\t}\n\t\t\t\t.section {\n\t\t\t\t\tmargin-bottom: 1.5rem;\n\t\t\t\t\tpadding: 1.5rem;\n\t\t\t\t\tbackground: white;\n\t\t\t\t\tborder: 1px solid #ddd;\n\t\t\t\t\tborder-radius: 8px;\n\t\t\t\t\tbox-shadow: 0 1px 3px rgba(0,0,0,0.1);\n\t\t\t\t}\n\t\t\t\t.section h2 {\n\t\t\t\t\tmargin-top: 0;\n\t\t\t\t\tcolor: #444;\n\t\t\t\t\tfont-size: 1.25rem;\n\t\t\t\t}\n\t\t\t\t.section p {\n\t\t\t\t\tcolor: #666;\n\t\t\t\t\tmargin-bottom: 1rem;\n\t\t\t\t}\n\t\t\t\tbutton {\n\t\t\t\t\tpadding: 0.5rem 1rem;\n\t\t\t\t\tcursor: pointer;\n\t\t\t\t\tbackground-color: #0066cc;\n\t\t\t\t\tcolor: white;\n\t\t\t\t\tborder: none;\n\t\t\t\t\tborder-radius: 4px;\n\t\t\t\t\tfont-size: 0.9rem;\n\t\t\t\t}\n\t\t\t\tbutton:hover {\n\t\t\t\t\tbackground-color: #0055aa;\n\t\t\t\t}\n\t\t\t\tbutton:disabled {\n\t\t\t\t\tbackground-color: #ccc;\n\t\t\t\t\tcursor: not-allowed;\n\t\t\t\t}\n\t\t\t\tselect, input[type=\"text\"] {\n\t\t\t\t\tpadding: 0.5rem;\n\t\t\t\t\tmin-width: 250px;\n\t\t\t\t\tborder: 1px solid #ccc;\n\t\t\t\t\tborder-radius: 4px;\n\t\t\t\t\tfont-size: 0.9rem;\n\t\t\t\t}\n\t\t\t\t.form-group {\n\t\t\t\t\tdisplay: flex;\n\t\t\t\t\tgap: 0.5rem;\n\t\t\t\t\talign-items: center;\n\t\t\t\t\tflex-wrap: wrap;\n\t\t\t\t}\n\t\t\t\t.result {\n\t\t\t\t\tmargin-top: 1rem;\n\t\t\t\t\tpadding: 0.75rem 1rem;\n\t\t\t\t\tborder-radius: 4px;\n\t\t\t\t}\n\t\t\t\t.success {\n\t\t\t\t\tbackground-color: #d4edda;\n\t\t\t\t\tcolor: #155724;\n\t\t\t\t\tborder: 1px solid #c3e6cb;\n\t\t\t\t}\n\t\t\t\t.error {\n\t\t\t\t\tbackground-color: #f8d7da;\n\t\t\t\t\tcolor: #721c24;\n\t\t\t\t\tborder: 1px solid #f5c6cb;\n\t\t\t\t}\n\t\t\t\t.htmx-request button {\n\t\t\t\t\topacity: 0.6;\n\t\t\t\t}\n\t\t\t\t.htmx-indicator {\n\t\t\t\t\tdisplay: none;\n\t\t\t\t}\n\t\t\t\t.htmx-request .htmx-indicator {\n\t\t\t\t\tdisplay: block;\n\t\t\t\t}\n\t\t\t\t.loading {\n\t\t\t\t\tbackground-color: #fff3cd;\n\t\t\t\t\tcolor: #856404;\n\t\t\t\t\tborder: 1px solid #ffeeba;\n\t\t\t\t}\n\t\t\t</style></head><body><header><h1>Talks Indexer</h1>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if email := getUserEmail(ctx); email != "" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"user-info\"><span>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var3 string
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(email)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/adapters/web/templates/layout.templ`, Line: 148, Col: 19}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</span><form action=\"/auth/logout\" method=\"POST\" style=\"margin: 0;\"><button type=\"submit\" class=\"logout-btn\">Log out</button></form></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</header><main>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -50,7 +86,7 @@ func Layout(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</main></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

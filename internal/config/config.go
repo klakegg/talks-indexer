@@ -37,6 +37,19 @@ type Config struct {
 	ElasticsearchURL  string `env:"ELASTICSEARCH_URL" envDefault:"http://localhost:9200"`
 	PrivateIndex      string `env:"PRIVATE_INDEX" envDefault:"javazone_private"`
 	PublicIndex       string `env:"PUBLIC_INDEX" envDefault:"javazone_public"`
+
+	// OIDC Configuration (only used in production mode)
+	OIDCIssuerURL    string `env:"OIDC_ISSUER_URL"`
+	OIDCClientID     string `env:"OIDC_CLIENT_ID"`
+	OIDCClientSecret string `env:"OIDC_CLIENT_SECRET"`
+	OIDCRedirectURL  string `env:"OIDC_REDIRECT_URL"`
+}
+
+// IsOIDCConfigured returns true if OIDC is fully configured
+func (c *Config) IsOIDCConfigured() bool {
+	return c.OIDCIssuerURL != "" &&
+		c.OIDCClientID != "" &&
+		c.OIDCClientSecret != ""
 }
 
 // Load reads configuration from environment variables and optionally from a .env file.

@@ -10,6 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	testPrivateMapping = `{"mappings":{"private":true}}`
+	testPublicMapping  = `{"mappings":{"public":true}}`
+)
+
 // mockTalkSource is a mock implementation of ports.TalkSource
 type mockTalkSource struct {
 	getConferencesFunc func(ctx context.Context) ([]domain.Conference, error)
@@ -89,13 +94,15 @@ func TestNewIndexerService(t *testing.T) {
 	source := &mockTalkSource{}
 	index := &mockSearchIndex{}
 
-	service := NewIndexerService(source, index, "private", "public")
+	service := NewIndexerService(source, index, "private", "public", testPrivateMapping, testPublicMapping)
 
 	assert.NotNil(t, service)
 	assert.Equal(t, source, service.source)
 	assert.Equal(t, index, service.searchIndex)
 	assert.Equal(t, "private", service.privateIndex)
 	assert.Equal(t, "public", service.publicIndex)
+	assert.Equal(t, testPrivateMapping, service.privateIndexMapping)
+	assert.Equal(t, testPublicMapping, service.publicIndexMapping)
 }
 
 func TestReindexAll_Success(t *testing.T) {
@@ -120,7 +127,7 @@ func TestReindexAll_Success(t *testing.T) {
 
 	index := &mockSearchIndex{}
 
-	service := NewIndexerService(source, index, "private", "public")
+	service := NewIndexerService(source, index, "private", "public", testPrivateMapping, testPublicMapping)
 	err := service.ReindexAll(context.Background())
 
 	require.NoError(t, err)
@@ -154,7 +161,7 @@ func TestReindexAll_NoConferences(t *testing.T) {
 
 	index := &mockSearchIndex{}
 
-	service := NewIndexerService(source, index, "private", "public")
+	service := NewIndexerService(source, index, "private", "public", testPrivateMapping, testPublicMapping)
 	err := service.ReindexAll(context.Background())
 
 	require.NoError(t, err)
@@ -176,7 +183,7 @@ func TestReindexAll_FetchConferencesError(t *testing.T) {
 
 	index := &mockSearchIndex{}
 
-	service := NewIndexerService(source, index, "private", "public")
+	service := NewIndexerService(source, index, "private", "public", testPrivateMapping, testPublicMapping)
 	err := service.ReindexAll(context.Background())
 
 	require.Error(t, err)
@@ -205,7 +212,7 @@ func TestReindexAll_FetchTalksError_ContinuesWithOtherConferences(t *testing.T) 
 
 	index := &mockSearchIndex{}
 
-	service := NewIndexerService(source, index, "private", "public")
+	service := NewIndexerService(source, index, "private", "public", testPrivateMapping, testPublicMapping)
 	err := service.ReindexAll(context.Background())
 
 	// Should not return error, just log and continue
@@ -240,7 +247,7 @@ func TestReindexConference_Success(t *testing.T) {
 		},
 	}
 
-	service := NewIndexerService(source, index, "private", "public")
+	service := NewIndexerService(source, index, "private", "public", testPrivateMapping, testPublicMapping)
 	err := service.ReindexConference(context.Background(), "javazone2024")
 
 	require.NoError(t, err)
@@ -273,7 +280,7 @@ func TestReindexConference_NotFound(t *testing.T) {
 
 	index := &mockSearchIndex{}
 
-	service := NewIndexerService(source, index, "private", "public")
+	service := NewIndexerService(source, index, "private", "public", testPrivateMapping, testPublicMapping)
 	err := service.ReindexConference(context.Background(), "nonexistent")
 
 	require.Error(t, err)
@@ -300,7 +307,7 @@ func TestReindexConference_CreateIndexIfNotExists(t *testing.T) {
 		},
 	}
 
-	service := NewIndexerService(source, index, "private", "public")
+	service := NewIndexerService(source, index, "private", "public", testPrivateMapping, testPublicMapping)
 	err := service.ReindexConference(context.Background(), "test")
 
 	require.NoError(t, err)

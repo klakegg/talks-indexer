@@ -1,5 +1,18 @@
 package templates
 
+import (
+	"context"
+
+	"github.com/javaBin/talks-indexer/internal/adapters/auth"
+)
+
+func getUserEmail(ctx context.Context) string {
+	if sess := auth.GetSession(ctx); sess != nil {
+		return sess.Email
+	}
+	return ""
+}
+
 templ Layout(title string) {
 	<!DOCTYPE html>
 	<html lang="en">
@@ -9,15 +22,46 @@ templ Layout(title string) {
 			<title>{ title }</title>
 			<script src="https://unpkg.com/htmx.org@2.0.4"></script>
 			<style>
+				* {
+					box-sizing: border-box;
+				}
 				body {
 					font-family: system-ui, -apple-system, sans-serif;
 					max-width: 800px;
-					margin: 2rem auto;
+					margin: 0 auto;
 					padding: 0 1rem;
 					background-color: #f5f5f5;
 				}
+				header {
+					display: flex;
+					justify-content: space-between;
+					align-items: center;
+					padding: 1rem 0;
+					margin-bottom: 1rem;
+					border-bottom: 1px solid #ddd;
+				}
+				header .user-info {
+					display: flex;
+					align-items: center;
+					gap: 1rem;
+					color: #666;
+					font-size: 0.9rem;
+				}
+				header .logout-btn {
+					padding: 0.4rem 0.8rem;
+					background-color: #dc3545;
+					color: white;
+					border: none;
+					border-radius: 4px;
+					cursor: pointer;
+					font-size: 0.85rem;
+				}
+				header .logout-btn:hover {
+					background-color: #c82333;
+				}
 				h1 {
 					color: #333;
+					margin: 0;
 				}
 				.section {
 					margin-bottom: 1.5rem;
@@ -97,7 +141,20 @@ templ Layout(title string) {
 			</style>
 		</head>
 		<body>
-			{ children... }
+			<header>
+				<h1>Talks Indexer</h1>
+				if email := getUserEmail(ctx); email != "" {
+					<div class="user-info">
+						<span>{ email }</span>
+						<form action="/auth/logout" method="POST" style="margin: 0;">
+							<button type="submit" class="logout-btn">Log out</button>
+						</form>
+					</div>
+				}
+			</header>
+			<main>
+				{ children... }
+			</main>
 		</body>
 	</html>
 }

@@ -16,13 +16,13 @@ Talks Indexer fetches talk/session data from a moresleep instance and bulk-index
 - Dual-index strategy separating private and public data
 - Simple HTTP API for triggering reindex operations
 - Web admin dashboard for manual reindexing
-- Webhook support for real-time updates (planned)
+- OIDC authentication for admin dashboard in production mode
 
 ## Quick Start
 
 ### Prerequisites
 
-- Go 1.22+
+- Go 1.25.5+
 - Docker and Docker Compose
 - Access to a running moresleep instance
 
@@ -59,7 +59,7 @@ Configuration is done via environment variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `MODE` | Running mode (`production` or `development`) | `production` |
+| `MODE` | Running mode (`production` or `development`). API endpoints are only available in development mode. | `production` |
 | `PORT` | HTTP server port | `8080` |
 | `MORESLEEP_URL` | Base URL of moresleep instance | `http://localhost:8082` |
 | `MORESLEEP_USER` | Username for moresleep auth (optional) | - |
@@ -67,8 +67,14 @@ Configuration is done via environment variables:
 | `ELASTICSEARCH_URL` | Elasticsearch URL | `http://localhost:9200` |
 | `PRIVATE_INDEX` | Name of private index | `javazone_private` |
 | `PUBLIC_INDEX` | Name of public index | `javazone_public` |
+| `OIDC_ISSUER_URL` | OIDC provider issuer URL | - |
+| `OIDC_CLIENT_ID` | OIDC client ID | - |
+| `OIDC_CLIENT_SECRET` | OIDC client secret | - |
+| `OIDC_REDIRECT_URL` | OIDC callback URL (e.g., `https://yourdomain.com/auth/callback`) | - |
 
 ## API
+
+> **Note:** API endpoints (except `/health`) are only available when `MODE=development`.
 
 ### Health Check
 
@@ -102,14 +108,6 @@ POST /api/reindex/talk/{talkId}
 
 Reindexes a specific talk by its ID.
 
-### Webhook (Planned)
-
-```bash
-POST /api/webhook
-```
-
-Receives update notifications from moresleep for incremental indexing.
-
 ## Web Admin Dashboard
 
 A simple web interface is available at `/admin` for triggering reindex operations manually:
@@ -118,6 +116,8 @@ A simple web interface is available at `/admin` for triggering reindex operation
 - Reindex a single conference (dropdown selection)
 - Reindex a single talk (by ID)
 
+In production mode, the admin dashboard requires OIDC authentication. Configure the `OIDC_*` environment variables to enable authentication.
+
 ## Architecture
 
 The application follows hexagonal architecture principles:
@@ -125,10 +125,12 @@ The application follows hexagonal architecture principles:
 ```
 internal/
 ├── adapters/           # Infrastructure implementations
-│   ├── http/           # HTTP API handlers
+│   ├── api/            # HTTP API handlers
 │   ├── web/            # Web admin dashboard (templ + htmx)
 │   │   ├── handlers/   # Web request handlers
 │   │   └── templates/  # templ templates
+│   ├── auth/           # OIDC authentication
+│   ├── session/        # In-memory session storage
 │   ├── moresleep/      # Moresleep API client
 │   └── elasticsearch/  # Elasticsearch client
 ├── app/                # Business logic

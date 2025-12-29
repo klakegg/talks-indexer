@@ -5,30 +5,19 @@ import (
 	"sync"
 
 	"github.com/javaBin/talks-indexer/internal/domain"
+	"github.com/javaBin/talks-indexer/internal/ports"
 )
-
-// Indexer defines the interface for reindexing operations
-type Indexer interface {
-	ReindexAll(ctx context.Context) error
-	ReindexConference(ctx context.Context, slug string) error
-	ReindexTalk(ctx context.Context, talkID string) error
-}
-
-// ConferenceProvider defines the interface for fetching conferences
-type ConferenceProvider interface {
-	GetConferences(ctx context.Context) ([]domain.Conference, error)
-}
 
 // Handler handles web UI requests for the admin dashboard
 type Handler struct {
-	indexer     Indexer
-	provider    ConferenceProvider
+	indexer     ports.Indexer
+	provider    ports.ConferenceProvider
 	conferences []domain.Conference
 	confMu      sync.RWMutex
 }
 
 // NewHandler creates a new web Handler with the provided dependencies
-func NewHandler(indexer Indexer, provider ConferenceProvider) *Handler {
+func NewHandler(indexer ports.Indexer, provider ports.ConferenceProvider) *Handler {
 	return &Handler{
 		indexer:  indexer,
 		provider: provider,

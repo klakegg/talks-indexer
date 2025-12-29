@@ -17,24 +17,5 @@ services:
       timeout: 5s
       retries: 10
 
-  # talks-indexer:
-  #   build: .
-  #   container_name: talks-indexer-app
-  #   environment:
-  #     - MORESLEEP_URL=http://host.docker.internal:8082
-  #     - MORESLEEP_USER=${MORESLEEP_USER:-}
-  #     - MORESLEEP_PASSWORD=${MORESLEEP_PASSWORD:-}
-  #     - ELASTICSEARCH_URL=http://elasticsearch:9200
-  #     - PRIVATE_INDEX=javazone_private
-  #     - PUBLIC_INDEX=javazone_public
-  #     - PORT=8080
-  #   ports:
-  #     - "8080:8080"
-  #   depends_on:
-  #     elasticsearch:
-  #       condition: service_healthy
-  #   extra_hosts:
-  #     - "host.docker.internal:host-gateway"
-
 volumes:
   elasticsearch-data:

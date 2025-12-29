@@ -5,18 +5,19 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/javaBin/talks-indexer/internal/adapters/elasticsearch"
 	"github.com/javaBin/talks-indexer/internal/domain"
 	"github.com/javaBin/talks-indexer/internal/ports"
 )
 
 // IndexerService handles the business logic for indexing talks
 type IndexerService struct {
-	source       ports.TalkSource
-	searchIndex  ports.SearchIndex
-	privateIndex string
-	publicIndex  string
-	logger       *slog.Logger
+	source              ports.TalkSource
+	searchIndex         ports.SearchIndex
+	privateIndex        string
+	publicIndex         string
+	privateIndexMapping string
+	publicIndexMapping  string
+	logger              *slog.Logger
 }
 
 // NewIndexerService creates a new IndexerService with the provided dependencies
@@ -25,13 +26,17 @@ func NewIndexerService(
 	searchIndex ports.SearchIndex,
 	privateIndex string,
 	publicIndex string,
+	privateIndexMapping string,
+	publicIndexMapping string,
 ) *IndexerService {
 	return &IndexerService{
-		source:       source,
-		searchIndex:  searchIndex,
-		privateIndex: privateIndex,
-		publicIndex:  publicIndex,
-		logger:       slog.Default().With("component", "indexer"),
+		source:              source,
+		searchIndex:         searchIndex,
+		privateIndex:        privateIndex,
+		publicIndex:         publicIndex,
+		privateIndexMapping: privateIndexMapping,
+		publicIndexMapping:  publicIndexMapping,
+		logger:              slog.Default().With("component", "indexer"),
 	}
 }
 
@@ -228,15 +233,16 @@ func (s *IndexerService) ReindexTalk(ctx context.Context, talkID string) error {
 	return nil
 }
 
-// recreateIndex deletes and recreates an index with the default mapping
+// recreateIndex deletes and recreates an index with the appropriate mapping
 func (s *IndexerService) recreateIndex(ctx context.Context, indexName string) error {
 	// Delete the index if it exists
 	if err := s.searchIndex.DeleteIndex(ctx, indexName); err != nil {
 		return fmt.Errorf("failed to delete index %s: %w", indexName, err)
 	}
 
-	// Create the index with the mapping
-	if err := s.searchIndex.CreateIndex(ctx, indexName, elasticsearch.TalkIndexMapping); err != nil {
+	// Create the index with the appropriate mapping
+	mapping := s.getMappingForIndex(indexName)
+	if err := s.searchIndex.CreateIndex(ctx, indexName, mapping); err != nil {
 		return fmt.Errorf("failed to create index %s: %w", indexName, err)
 	}
 
@@ -251,12 +257,21 @@ func (s *IndexerService) ensureIndexExists(ctx context.Context, indexName string
 	}
 
 	if !exists {
-		if err := s.searchIndex.CreateIndex(ctx, indexName, elasticsearch.TalkIndexMapping); err != nil {
+		mapping := s.getMappingForIndex(indexName)
+		if err := s.searchIndex.CreateIndex(ctx, indexName, mapping); err != nil {
 			return fmt.Errorf("failed to create index %s: %w", indexName, err)
 		}
 	}
 
 	return nil
+}
+
+// getMappingForIndex returns the appropriate mapping for the given index name
+func (s *IndexerService) getMappingForIndex(indexName string) string {
+	if indexName == s.privateIndex {
+		return s.privateIndexMapping
+	}
+	return s.publicIndexMapping
 }
 
 // prepareTalksForPrivateIndex returns talks with privateData merged into data

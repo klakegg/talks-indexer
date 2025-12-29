@@ -43,7 +43,7 @@ func Dashboard(conferences []domain.Conference) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<h1>Talks Indexer Admin</h1><div class=\"section\"><h2>Reindex All Conferences</h2><p>Reindex all talks from all conferences. This will recreate both indexes.</p><button hx-post=\"/admin/reindex/all\" hx-target=\"#result-all\" hx-indicator=\"#loading-all\" hx-disabled-elt=\"this\">Reindex All</button><div id=\"loading-all\" class=\"htmx-indicator\"><div class=\"result loading\">Reindexing all conferences...</div></div><div id=\"result-all\"></div></div><div class=\"section\"><h2>Reindex Single Conference</h2><p>Select a conference to reindex only its talks.</p><div class=\"form-group\"><select name=\"slug\" id=\"conference-select\"><option value=\"\">Select a conference...</option> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"section\"><h2>Reindex All Conferences</h2><p>Reindex all talks from all conferences. This will recreate both indexes.</p><button hx-post=\"/admin/reindex/all\" hx-target=\"#result-all\" hx-indicator=\"#loading-all\" hx-disabled-elt=\"this\">Reindex All</button><div id=\"loading-all\" class=\"htmx-indicator\"><div class=\"result loading\">Reindexing all conferences...</div></div><div id=\"result-all\"></div></div><div class=\"section\"><h2>Reindex Single Conference</h2><p>Select a conference to reindex only its talks.</p><div class=\"form-group\"><select name=\"slug\" id=\"conference-select\"><option value=\"\">Select a conference...</option> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -55,7 +55,7 @@ func Dashboard(conferences []domain.Conference) templ.Component {
 				var templ_7745c5c3_Var3 string
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(conf.Slug)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/adapters/web/templates/dashboard.templ`, Line: 33, Col: 31}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/adapters/web/templates/dashboard.templ`, Line: 31, Col: 31}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -68,7 +68,7 @@ func Dashboard(conferences []domain.Conference) templ.Component {
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(conf.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/adapters/web/templates/dashboard.templ`, Line: 33, Col: 45}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/adapters/web/templates/dashboard.templ`, Line: 31, Col: 45}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {

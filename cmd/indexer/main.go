@@ -10,9 +10,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/javaBin/talks-indexer/internal/adapters/api"
+	"github.com/javaBin/talks-indexer/internal/adapters/auth"
 	"github.com/javaBin/talks-indexer/internal/adapters/elasticsearch"
-	httpAdapter "github.com/javaBin/talks-indexer/internal/adapters/http"
 	"github.com/javaBin/talks-indexer/internal/adapters/moresleep"
+	"github.com/javaBin/talks-indexer/internal/adapters/session"
 	webAdapter "github.com/javaBin/talks-indexer/internal/adapters/web"
 	"github.com/javaBin/talks-indexer/internal/adapters/web/handlers"
 	"github.com/javaBin/talks-indexer/internal/app"
@@ -67,19 +69,62 @@ func main() {
 		esClient,
 		cfg.PrivateIndex,
 		cfg.PublicIndex,
+		elasticsearch.TalkPrivateIndexMapping,
+		elasticsearch.TalkPublicIndexMapping,
 	)
 	logger.Info("indexer service initialized")
 
-	// Create HTTP handler
-	handler := httpAdapter.NewHandler(indexerService)
-
-	// Create web handler
-	webHandler := handlers.NewHandler(indexerService, moresleepClient)
-
 	// Create HTTP server
 	mux := http.NewServeMux()
-	httpAdapter.RegisterRoutes(mux, handler)
-	webAdapter.RegisterRoutes(mux, webHandler)
+
+	// Health check is always available
+	apiHandler := api.NewHandler(indexerService)
+	api.RegisterHealthRoutes(mux, apiHandler)
+
+	// API routes only available in development mode
+	if cfg.Mode.IsDevelopment() {
+		api.RegisterAPIRoutes(mux, apiHandler)
+		logger.Info("API routes enabled (development mode)")
+	} else {
+		logger.Info("API routes disabled (production mode)")
+	}
+
+	// Web admin dashboard
+	webHandler := handlers.NewHandler(indexerService, moresleepClient)
+
+	// Set up authentication in production mode
+	if !cfg.Mode.IsDevelopment() && cfg.IsOIDCConfigured() {
+		oidcConfig := auth.OIDCConfig{
+			IssuerURL:    cfg.OIDCIssuerURL,
+			ClientID:     cfg.OIDCClientID,
+			ClientSecret: cfg.OIDCClientSecret,
+			RedirectURL:  cfg.OIDCRedirectURL,
+		}
+
+		authenticator, err := auth.NewAuthenticator(context.Background(), oidcConfig)
+		if err != nil {
+			logger.Error("failed to create OIDC authenticator", "error", err)
+			os.Exit(1)
+		}
+		logger.Info("OIDC authenticator initialized")
+
+		sessionStore := session.NewInMemoryStore()
+		secureCookies := true
+
+		authMiddleware := auth.NewMiddleware(sessionStore, authenticator, secureCookies)
+		authHandler := auth.NewHandler(sessionStore, authenticator, secureCookies)
+
+		mux.HandleFunc("GET /auth/callback", authHandler.HandleCallback)
+		mux.HandleFunc("POST /auth/logout", authHandler.HandleLogout)
+
+		webAdapter.RegisterProtectedRoutes(mux, webHandler, authMiddleware)
+		logger.Info("admin routes protected with OIDC authentication")
+	} else {
+		webAdapter.RegisterRoutes(mux, webHandler)
+		if !cfg.Mode.IsDevelopment() && !cfg.IsOIDCConfigured() {
+			logger.Warn("production mode but OIDC not configured - admin routes unprotected")
+		}
+	}
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),

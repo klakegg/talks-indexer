@@ -78,7 +78,7 @@ func TestClient_CreateIndex(t *testing.T) {
 		client, err := New(server.URL)
 		require.NoError(t, err)
 
-		err = client.CreateIndex(context.Background(), "test-index", TalkIndexMapping)
+		err = client.CreateIndex(context.Background(), "test-index", TalkPrivateIndexMapping)
 		assert.NoError(t, err)
 	})
 

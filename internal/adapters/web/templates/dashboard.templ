@@ -4,8 +4,6 @@ import "github.com/javaBin/talks-indexer/internal/domain"
 
 templ Dashboard(conferences []domain.Conference) {
 	@Layout("Talks Indexer Admin") {
-		<h1>Talks Indexer Admin</h1>
-
 		<div class="section">
 			<h2>Reindex All Conferences</h2>
 			<p>Reindex all talks from all conferences. This will recreate both indexes.</p>

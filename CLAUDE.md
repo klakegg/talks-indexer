@@ -27,10 +27,12 @@ make down       # Stop all services
 This project uses clean hexagonal architecture:
 
 - `internal/adapters/` - Infrastructure implementations
-  - `http/` - HTTP API handlers
+  - `api/` - HTTP API handlers
   - `web/` - Web admin dashboard (templ + htmx)
     - `handlers/` - Web request handlers
     - `templates/` - templ templates
+  - `auth/` - OIDC authentication (middleware, handlers)
+  - `session/` - In-memory session storage
   - `moresleep/` - Client for fetching data from moresleep API
   - `elasticsearch/` - Elasticsearch bulk indexing client
 - `internal/app/` - Business logic (indexing service)
@@ -42,7 +44,7 @@ This project uses clean hexagonal architecture:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `MODE` | Running mode (`production` or `development`) | `production` |
+| `MODE` | Running mode (`production` or `development`). API disabled in production. | `production` |
 | `PORT` | HTTP server port | `8080` |
 | `MORESLEEP_URL` | Base URL of moresleep instance | `http://localhost:8082` |
 | `MORESLEEP_USER` | Username for moresleep authentication | (empty) |
@@ -50,6 +52,10 @@ This project uses clean hexagonal architecture:
 | `ELASTICSEARCH_URL` | Elasticsearch URL | `http://localhost:9200` |
 | `PRIVATE_INDEX` | Name of private index | `javazone_private` |
 | `PUBLIC_INDEX` | Name of public index | `javazone_public` |
+| `OIDC_ISSUER_URL` | OIDC provider issuer URL (production only) | (empty) |
+| `OIDC_CLIENT_ID` | OIDC client ID (production only) | (empty) |
+| `OIDC_CLIENT_SECRET` | OIDC client secret (production only) | (empty) |
+| `OIDC_REDIRECT_URL` | OIDC callback URL (production only) | (empty) |
 
 ## API Endpoints
 
@@ -59,8 +65,9 @@ This project uses clean hexagonal architecture:
 | POST | `/api/reindex` | Trigger full reindex of all conferences |
 | POST | `/api/reindex/conference/{slug}` | Reindex a specific conference |
 | POST | `/api/reindex/talk/{talkId}` | Reindex a specific talk |
-| POST | `/api/webhook` | Webhook endpoint for moresleep updates (future) |
-| GET | `/admin` | Web admin dashboard |
+| GET | `/admin` | Web admin dashboard (auth required in production) |
+| GET | `/auth/callback` | OIDC callback handler (production only) |
+| POST | `/auth/logout` | Logout and clear session (production only) |
 
 ## Testing
 

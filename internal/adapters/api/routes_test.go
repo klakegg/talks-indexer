@@ -1,4 +1,4 @@
-package http
+package api
 
 import (
 	"context"
@@ -48,12 +48,6 @@ func TestRegisterRoutes(t *testing.T) {
 			path:           "/api/reindex/talk/test-talk-id",
 			expectedStatus: http.StatusOK,
 		},
-		{
-			name:           "POST /api/webhook",
-			method:         http.MethodPost,
-			path:           "/api/webhook",
-			expectedStatus: http.StatusOK,
-		},
 	}
 
 	for _, tt := range tests {
@@ -94,11 +88,6 @@ func TestRegisterRoutes_MethodNotAllowed(t *testing.T) {
 			name:   "GET /api/reindex should not be allowed",
 			method: http.MethodGet,
 			path:   "/api/reindex",
-		},
-		{
-			name:   "GET /api/webhook should not be allowed",
-			method: http.MethodGet,
-			path:   "/api/webhook",
 		},
 	}
 
