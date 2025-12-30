@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -40,26 +39,26 @@ func main() {
 
 	logger.Info("configuration loaded",
 		"mode", cfg.Mode,
-		"port", cfg.Port,
-		"moresleepURL", cfg.MoresleepURL,
-		"elasticsearchURL", cfg.ElasticsearchURL,
-		"privateIndex", cfg.PrivateIndex,
-		"publicIndex", cfg.PublicIndex,
+		"httpAddr", cfg.Http.Addr(),
+		"moresleepURL", cfg.Moresleep.URL,
+		"elasticsearchURL", cfg.Elasticsearch.URL,
+		"privateIndex", cfg.Index.Private,
+		"publicIndex", cfg.Index.Public,
 	)
 
 	// Initialize moresleep client
 	moresleepClient := moresleep.New(
-		cfg.MoresleepURL,
-		cfg.MoresleepUser,
-		cfg.MoresleepPassword,
+		cfg.Moresleep.URL,
+		cfg.Moresleep.User,
+		cfg.Moresleep.Password,
 	)
 	logger.Info("moresleep client initialized")
 
 	// Initialize elasticsearch client
 	esClient, err := elasticsearch.New(
-		cfg.ElasticsearchURL,
-		cfg.ElasticsearchUser,
-		cfg.ElasticsearchPassword,
+		cfg.Elasticsearch.URL,
+		cfg.Elasticsearch.User,
+		cfg.Elasticsearch.Password,
 	)
 	if err != nil {
 		logger.Error("failed to create elasticsearch client", "error", err)
@@ -71,8 +70,8 @@ func main() {
 	indexerService := app.NewIndexerService(
 		moresleepClient,
 		esClient,
-		cfg.PrivateIndex,
-		cfg.PublicIndex,
+		cfg.Index.Private,
+		cfg.Index.Public,
 		elasticsearch.TalkPrivateIndexMapping,
 		elasticsearch.TalkPublicIndexMapping,
 	)
@@ -97,12 +96,12 @@ func main() {
 	webHandler := handlers.NewHandler(indexerService, moresleepClient)
 
 	// Set up authentication in production mode
-	if !cfg.Mode.IsDevelopment() && cfg.IsOIDCConfigured() {
+	if !cfg.Mode.IsDevelopment() && cfg.OIDC.IsConfigured() {
 		oidcConfig := auth.OIDCConfig{
-			IssuerURL:    cfg.OIDCIssuerURL,
-			ClientID:     cfg.OIDCClientID,
-			ClientSecret: cfg.OIDCClientSecret,
-			RedirectURL:  cfg.OIDCRedirectURL,
+			IssuerURL:    cfg.OIDC.IssuerURL,
+			ClientID:     cfg.OIDC.ClientID,
+			ClientSecret: cfg.OIDC.ClientSecret,
+			RedirectURL:  cfg.OIDC.RedirectURL,
 		}
 
 		authenticator, err := auth.NewAuthenticator(context.Background(), oidcConfig)
@@ -125,13 +124,13 @@ func main() {
 		logger.Info("admin routes protected with OIDC authentication")
 	} else {
 		webAdapter.RegisterRoutes(mux, webHandler)
-		if !cfg.Mode.IsDevelopment() && !cfg.IsOIDCConfigured() {
+		if !cfg.Mode.IsDevelopment() && !cfg.OIDC.IsConfigured() {
 			logger.Warn("production mode but OIDC not configured - admin routes unprotected")
 		}
 	}
 
 	server := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Port),
+		Addr:         cfg.Http.Addr(),
 		Handler:      mux,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second, // Longer for reindex operations

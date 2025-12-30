@@ -60,7 +60,8 @@ Configuration is done via environment variables:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `MODE` | Running mode (`production` or `development`). API endpoints are only available in development mode. | `production` |
-| `PORT` | HTTP server port | `8080` |
+| `HTTP_HOST` | HTTP server host | `0.0.0.0` |
+| `HTTP_PORT` | HTTP server port | `8080` |
 | `MORESLEEP_URL` | Base URL of moresleep instance | `http://localhost:8082` |
 | `MORESLEEP_USER` | Username for moresleep auth (optional) | - |
 | `MORESLEEP_PASSWORD` | Password for moresleep auth (optional) | - |

@@ -45,7 +45,8 @@ This project uses clean hexagonal architecture:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `MODE` | Running mode (`production` or `development`). API disabled in production. | `production` |
-| `PORT` | HTTP server port | `8080` |
+| `HTTP_HOST` | HTTP server host | `0.0.0.0` |
+| `HTTP_PORT` | HTTP server port | `8080` |
 | `MORESLEEP_URL` | Base URL of moresleep instance | `http://localhost:8082` |
 | `MORESLEEP_USER` | Username for moresleep authentication | (empty) |
 | `MORESLEEP_PASSWORD` | Password for moresleep authentication | (empty) |
