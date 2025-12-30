@@ -13,9 +13,7 @@ import (
 	"github.com/javaBin/talks-indexer/internal/adapters/auth"
 	"github.com/javaBin/talks-indexer/internal/adapters/elasticsearch"
 	"github.com/javaBin/talks-indexer/internal/adapters/moresleep"
-	"github.com/javaBin/talks-indexer/internal/adapters/session"
-	webAdapter "github.com/javaBin/talks-indexer/internal/adapters/web"
-	"github.com/javaBin/talks-indexer/internal/adapters/web/handlers"
+	"github.com/javaBin/talks-indexer/internal/adapters/web"
 	"github.com/javaBin/talks-indexer/internal/app"
 	"github.com/javaBin/talks-indexer/internal/config"
 )
@@ -23,6 +21,9 @@ import (
 func main() {
 	// Load configuration first to determine logging mode
 	cfg := config.MustLoad()
+
+	// Inject config into context for use by adapters and services
+	ctx := config.WithConfig(context.Background(), cfg)
 
 	// Configure logging based on mode
 	var logger *slog.Logger
@@ -47,19 +48,15 @@ func main() {
 	)
 
 	// Initialize moresleep client
-	moresleepClient := moresleep.New(
-		cfg.Moresleep.URL,
-		cfg.Moresleep.User,
-		cfg.Moresleep.Password,
-	)
+	moresleepClient, err := moresleep.New(ctx)
+	if err != nil {
+		logger.Error("failed to create moresleep client", "error", err)
+		os.Exit(1)
+	}
 	logger.Info("moresleep client initialized")
 
 	// Initialize elasticsearch client
-	esClient, err := elasticsearch.New(
-		cfg.Elasticsearch.URL,
-		cfg.Elasticsearch.User,
-		cfg.Elasticsearch.Password,
-	)
+	esClient, err := elasticsearch.New(ctx)
 	if err != nil {
 		logger.Error("failed to create elasticsearch client", "error", err)
 		os.Exit(1)
@@ -68,10 +65,9 @@ func main() {
 
 	// Create indexer service
 	indexerService := app.NewIndexerService(
+		ctx,
 		moresleepClient,
 		esClient,
-		cfg.Index.Private,
-		cfg.Index.Public,
 		elasticsearch.TalkPrivateIndexMapping,
 		elasticsearch.TalkPublicIndexMapping,
 	)
@@ -80,54 +76,21 @@ func main() {
 	// Create HTTP server
 	mux := http.NewServeMux()
 
-	// Health check is always available
-	apiHandler := api.NewHandler(indexerService)
-	api.RegisterHealthRoutes(mux, apiHandler)
+	// Register API routes (mode-aware)
+	apiAdapter := api.New(ctx, indexerService)
+	apiAdapter.RegisterRoutes(mux)
 
-	// API routes only available in development mode
-	if cfg.Mode.IsDevelopment() {
-		api.RegisterAPIRoutes(mux, apiHandler)
-		logger.Info("API routes enabled (development mode)")
-	} else {
-		logger.Info("API routes disabled (production mode)")
+	// Initialize auth adapter and register routes
+	authAdapter, err := auth.New(ctx)
+	if err != nil {
+		logger.Error("failed to initialize auth", "error", err)
+		os.Exit(1)
 	}
+	authAdapter.RegisterRoutes(mux)
 
-	// Web admin dashboard
-	webHandler := handlers.NewHandler(indexerService, moresleepClient)
-
-	// Set up authentication in production mode
-	if !cfg.Mode.IsDevelopment() && cfg.OIDC.IsConfigured() {
-		oidcConfig := auth.OIDCConfig{
-			IssuerURL:    cfg.OIDC.IssuerURL,
-			ClientID:     cfg.OIDC.ClientID,
-			ClientSecret: cfg.OIDC.ClientSecret,
-			RedirectURL:  cfg.OIDC.RedirectURL,
-		}
-
-		authenticator, err := auth.NewAuthenticator(context.Background(), oidcConfig)
-		if err != nil {
-			logger.Error("failed to create OIDC authenticator", "error", err)
-			os.Exit(1)
-		}
-		logger.Info("OIDC authenticator initialized")
-
-		sessionStore := session.NewInMemoryStore()
-		secureCookies := true
-
-		authMiddleware := auth.NewMiddleware(sessionStore, authenticator, secureCookies)
-		authHandler := auth.NewHandler(sessionStore, authenticator, secureCookies)
-
-		mux.HandleFunc("GET /auth/callback", authHandler.HandleCallback)
-		mux.HandleFunc("POST /auth/logout", authHandler.HandleLogout)
-
-		webAdapter.RegisterProtectedRoutes(mux, webHandler, authMiddleware)
-		logger.Info("admin routes protected with OIDC authentication")
-	} else {
-		webAdapter.RegisterRoutes(mux, webHandler)
-		if !cfg.Mode.IsDevelopment() && !cfg.OIDC.IsConfigured() {
-			logger.Warn("production mode but OIDC not configured - admin routes unprotected")
-		}
-	}
+	// Register web admin routes (protected if auth middleware is available)
+	webAdapter := web.New(indexerService, moresleepClient)
+	webAdapter.RegisterRoutes(mux, web.MiddlewareFunc(authAdapter.Middleware()))
 
 	server := &http.Server{
 		Addr:         cfg.Http.Addr(),

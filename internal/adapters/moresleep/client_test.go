@@ -8,10 +8,68 @@ import (
 	"testing"
 	"time"
 
+	"github.com/javaBin/talks-indexer/internal/config"
 	"github.com/javaBin/talks-indexer/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// testConfig creates a test config with the given moresleep URL
+func testConfig(moresleepURL string) *config.Config {
+	return &config.Config{
+		Moresleep: config.MoresleepConfig{
+			URL:      moresleepURL,
+			User:     "",
+			Password: "",
+		},
+	}
+}
+
+// testConfigWithAuth creates a test config with moresleep URL and credentials
+func testConfigWithAuth(moresleepURL, user, password string) *config.Config {
+	return &config.Config{
+		Moresleep: config.MoresleepConfig{
+			URL:      moresleepURL,
+			User:     user,
+			Password: password,
+		},
+	}
+}
+
+func TestNew(t *testing.T) {
+	t.Run("successful creation with context config", func(t *testing.T) {
+		cfg := testConfig("https://api.example.com")
+		ctx := config.WithConfig(context.Background(), cfg)
+
+		client, err := New(ctx)
+
+		require.NoError(t, err)
+		assert.NotNil(t, client)
+		assert.Equal(t, "https://api.example.com", client.baseURL)
+		assert.Equal(t, "", client.username)
+		assert.Equal(t, "", client.password)
+	})
+
+	t.Run("successful creation with auth config", func(t *testing.T) {
+		cfg := testConfigWithAuth("https://api.example.com", "user", "pass")
+		ctx := config.WithConfig(context.Background(), cfg)
+
+		client, err := New(ctx)
+
+		require.NoError(t, err)
+		assert.NotNil(t, client)
+		assert.Equal(t, "https://api.example.com", client.baseURL)
+		assert.Equal(t, "user", client.username)
+		assert.Equal(t, "pass", client.password)
+	})
+
+	t.Run("panics when config not in context", func(t *testing.T) {
+		ctx := context.Background()
+		assert.Panics(t, func() {
+			New(ctx)
+		})
+	})
+}
 
 func TestClient_GetConferences(t *testing.T) {
 	t.Run("successful fetch with wrapped response", func(t *testing.T) {
@@ -39,7 +97,7 @@ func TestClient_GetConferences(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := New(server.URL, "", "")
+		client := NewWithHTTPClient(server.URL, "", "", &http.Client{})
 		conferences, err := client.GetConferences(context.Background())
 
 		require.NoError(t, err)
@@ -64,7 +122,7 @@ func TestClient_GetConferences(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := New(server.URL, "", "")
+		client := NewWithHTTPClient(server.URL, "", "", &http.Client{})
 		conferences, err := client.GetConferences(context.Background())
 
 		require.NoError(t, err)
@@ -90,7 +148,7 @@ func TestClient_GetConferences(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := New(server.URL, "testuser", "testpass")
+		client := NewWithHTTPClient(server.URL, "testuser", "testpass", &http.Client{})
 		conferences, err := client.GetConferences(context.Background())
 
 		require.NoError(t, err)
@@ -104,7 +162,7 @@ func TestClient_GetConferences(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := New(server.URL, "", "")
+		client := NewWithHTTPClient(server.URL, "", "", &http.Client{})
 		conferences, err := client.GetConferences(context.Background())
 
 		require.Error(t, err)
@@ -119,7 +177,7 @@ func TestClient_GetConferences(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := New(server.URL, "", "")
+		client := NewWithHTTPClient(server.URL, "", "", &http.Client{})
 		conferences, err := client.GetConferences(context.Background())
 
 		require.Error(t, err)
@@ -202,7 +260,7 @@ func TestClient_GetTalks(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := New(server.URL, "", "")
+		client := NewWithHTTPClient(server.URL, "", "", &http.Client{})
 		talks, err := client.GetTalks(context.Background(), "conf-1")
 
 		require.NoError(t, err)
@@ -269,7 +327,7 @@ func TestClient_GetTalks(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := New(server.URL, "", "")
+		client := NewWithHTTPClient(server.URL, "", "", &http.Client{})
 		talks, err := client.GetTalks(context.Background(), "conf-1")
 
 		require.NoError(t, err)
@@ -312,7 +370,7 @@ func TestClient_GetTalks(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := New(server.URL, "", "")
+		client := NewWithHTTPClient(server.URL, "", "", &http.Client{})
 		talks, err := client.GetTalks(context.Background(), "nonexistent")
 
 		// Should still succeed but with empty slug
@@ -327,7 +385,7 @@ func TestClient_GetTalks(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := New(server.URL, "", "")
+		client := NewWithHTTPClient(server.URL, "", "", &http.Client{})
 		talks, err := client.GetTalks(context.Background(), "conf-1")
 
 		require.Error(t, err)
@@ -352,7 +410,7 @@ func TestClient_GetTalks(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := New(server.URL, "", "")
+		client := NewWithHTTPClient(server.URL, "", "", &http.Client{})
 		talks, err := client.GetTalks(context.Background(), "conf-1")
 
 		require.Error(t, err)
@@ -388,7 +446,7 @@ func TestClient_InterfaceCompliance(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := New(server.URL, "", "")
+	client := NewWithHTTPClient(server.URL, "", "", &http.Client{})
 
 	// Test that we can use the client through the interface
 	ctx := context.Background()

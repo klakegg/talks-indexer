@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/javaBin/talks-indexer/internal/config"
 	"github.com/javaBin/talks-indexer/internal/domain"
 	"github.com/javaBin/talks-indexer/internal/ports"
 )
@@ -20,8 +21,30 @@ type IndexerService struct {
 	logger              *slog.Logger
 }
 
-// NewIndexerService creates a new IndexerService with the provided dependencies
+// NewIndexerService creates a new IndexerService, receiving context as first parameter
+// to retrieve configuration, along with the required port dependencies.
 func NewIndexerService(
+	ctx context.Context,
+	source ports.TalkSource,
+	searchIndex ports.SearchIndex,
+	privateIndexMapping string,
+	publicIndexMapping string,
+) *IndexerService {
+	cfg := config.GetConfig(ctx)
+	return &IndexerService{
+		source:              source,
+		searchIndex:         searchIndex,
+		privateIndex:        cfg.Index.Private,
+		publicIndex:         cfg.Index.Public,
+		privateIndexMapping: privateIndexMapping,
+		publicIndexMapping:  publicIndexMapping,
+		logger:              slog.Default().With("component", "indexer"),
+	}
+}
+
+// NewIndexerServiceWithConfig creates a new IndexerService with explicit configuration.
+// This constructor is primarily intended for testing purposes.
+func NewIndexerServiceWithConfig(
 	source ports.TalkSource,
 	searchIndex ports.SearchIndex,
 	privateIndex string,

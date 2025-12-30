@@ -1,15 +1,22 @@
 package api
 
-import "github.com/javaBin/talks-indexer/internal/ports"
+import (
+	"context"
 
-// Handler holds the HTTP handler dependencies
-type Handler struct {
+	"github.com/javaBin/talks-indexer/internal/config"
+	"github.com/javaBin/talks-indexer/internal/ports"
+)
+
+// Adapter holds the API adapter dependencies
+type Adapter struct {
 	indexer ports.Indexer
+	cfg     *config.Config
 }
 
-// NewHandler creates a new HTTP handler with the provided indexer service
-func NewHandler(indexer ports.Indexer) *Handler {
-	return &Handler{
+// New creates a new API adapter
+func New(ctx context.Context, indexer ports.Indexer) *Adapter {
+	return &Adapter{
 		indexer: indexer,
+		cfg:     config.GetConfig(ctx),
 	}
 }

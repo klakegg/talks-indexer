@@ -13,20 +13,21 @@ import (
 )
 
 func TestHandleReindexAll_Success(t *testing.T) {
-	// Create handler with mock indexer
+	// Create adapter with mock indexer
+	ctx := testContext()
 	indexer := &mockIndexer{
 		reindexAllFunc: func(ctx context.Context) error {
 			return nil
 		},
 	}
-	handler := NewHandler(indexer)
+	adapter := New(ctx, indexer)
 
 	// Create request
 	req := httptest.NewRequest(http.MethodPost, "/api/reindex", nil)
 	w := httptest.NewRecorder()
 
 	// Call handler
-	handler.HandleReindexAll(w, req)
+	adapter.HandleReindexAll(w, req)
 
 	// Assert response
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -44,20 +45,21 @@ func TestHandleReindexAll_Success(t *testing.T) {
 func TestHandleReindexAll_Error(t *testing.T) {
 	expectedError := errors.New("indexing failed")
 
-	// Create handler with mock indexer that returns an error
+	// Create adapter with mock indexer that returns an error
+	ctx := testContext()
 	indexer := &mockIndexer{
 		reindexAllFunc: func(ctx context.Context) error {
 			return expectedError
 		},
 	}
-	handler := NewHandler(indexer)
+	adapter := New(ctx, indexer)
 
 	// Create request
 	req := httptest.NewRequest(http.MethodPost, "/api/reindex", nil)
 	w := httptest.NewRecorder()
 
 	// Call handler
-	handler.HandleReindexAll(w, req)
+	adapter.HandleReindexAll(w, req)
 
 	// Assert response
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -76,14 +78,15 @@ func TestHandleReindexAll_Error(t *testing.T) {
 func TestHandleReindexConference_Success(t *testing.T) {
 	var capturedSlug string
 
-	// Create handler with mock indexer
+	// Create adapter with mock indexer
+	ctx := testContext()
 	indexer := &mockIndexer{
 		reindexConferenceFunc: func(ctx context.Context, slug string) error {
 			capturedSlug = slug
 			return nil
 		},
 	}
-	handler := NewHandler(indexer)
+	adapter := New(ctx, indexer)
 
 	// Create request with slug path parameter
 	req := httptest.NewRequest(http.MethodPost, "/api/reindex/javazone-2024", nil)
@@ -91,7 +94,7 @@ func TestHandleReindexConference_Success(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Call handler
-	handler.HandleReindexConference(w, req)
+	adapter.HandleReindexConference(w, req)
 
 	// Assert response
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -111,15 +114,16 @@ func TestHandleReindexConference_Success(t *testing.T) {
 }
 
 func TestHandleReindexConference_MissingSlug(t *testing.T) {
+	ctx := testContext()
 	indexer := &mockIndexer{}
-	handler := NewHandler(indexer)
+	adapter := New(ctx, indexer)
 
 	// Create request without slug
 	req := httptest.NewRequest(http.MethodPost, "/api/reindex/", nil)
 	w := httptest.NewRecorder()
 
 	// Call handler
-	handler.HandleReindexConference(w, req)
+	adapter.HandleReindexConference(w, req)
 
 	// Assert response
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -136,13 +140,14 @@ func TestHandleReindexConference_MissingSlug(t *testing.T) {
 func TestHandleReindexConference_Error(t *testing.T) {
 	expectedError := errors.New("conference not found")
 
-	// Create handler with mock indexer that returns an error
+	// Create adapter with mock indexer that returns an error
+	ctx := testContext()
 	indexer := &mockIndexer{
 		reindexConferenceFunc: func(ctx context.Context, slug string) error {
 			return expectedError
 		},
 	}
-	handler := NewHandler(indexer)
+	adapter := New(ctx, indexer)
 
 	// Create request with slug
 	req := httptest.NewRequest(http.MethodPost, "/api/reindex/invalid-conf", nil)
@@ -150,7 +155,7 @@ func TestHandleReindexConference_Error(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Call handler
-	handler.HandleReindexConference(w, req)
+	adapter.HandleReindexConference(w, req)
 
 	// Assert response
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -167,7 +172,8 @@ func TestHandleReindexConference_Error(t *testing.T) {
 }
 
 func TestWriteSuccessResponse(t *testing.T) {
-	handler := NewHandler(&mockIndexer{})
+	ctx := testContext()
+	adapter := New(ctx, &mockIndexer{})
 	w := httptest.NewRecorder()
 
 	response := ReindexResponse{
@@ -175,7 +181,7 @@ func TestWriteSuccessResponse(t *testing.T) {
 		Message: "test message",
 	}
 
-	handler.writeSuccessResponse(w, response)
+	adapter.writeSuccessResponse(w, response)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
@@ -189,11 +195,12 @@ func TestWriteSuccessResponse(t *testing.T) {
 }
 
 func TestWriteErrorResponse(t *testing.T) {
-	handler := NewHandler(&mockIndexer{})
+	ctx := testContext()
+	adapter := New(ctx, &mockIndexer{})
 	w := httptest.NewRecorder()
 
 	testError := errors.New("test error")
-	handler.writeErrorResponse(w, "operation failed", testError)
+	adapter.writeErrorResponse(w, "operation failed", testError)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
@@ -208,10 +215,11 @@ func TestWriteErrorResponse(t *testing.T) {
 }
 
 func TestWriteErrorResponse_NoError(t *testing.T) {
-	handler := NewHandler(&mockIndexer{})
+	ctx := testContext()
+	adapter := New(ctx, &mockIndexer{})
 	w := httptest.NewRecorder()
 
-	handler.writeErrorResponse(w, "operation failed", nil)
+	adapter.writeErrorResponse(w, "operation failed", nil)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 

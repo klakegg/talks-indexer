@@ -1,25 +1,23 @@
 package api
 
 import (
+	"log/slog"
 	"net/http"
 )
 
-// RegisterHealthRoutes registers the health check endpoint (always available)
-func RegisterHealthRoutes(mux *http.ServeMux, h *Handler) {
-	mux.HandleFunc("GET /health", h.HandleHealth)
-}
+// RegisterRoutes registers all API routes with the provided mux.
+// Health check is always available. API routes are only registered in development mode.
+func (a *Adapter) RegisterRoutes(mux *http.ServeMux) {
+	// Health check is always available
+	mux.HandleFunc("GET /health", a.HandleHealth)
 
-// RegisterAPIRoutes registers API routes (development mode only)
-func RegisterAPIRoutes(mux *http.ServeMux, h *Handler) {
-	// Reindex endpoints
-	mux.HandleFunc("POST /api/reindex", h.HandleReindexAll)
-	mux.HandleFunc("POST /api/reindex/conference/{slug}", h.HandleReindexConference)
-	mux.HandleFunc("POST /api/reindex/talk/{talkId}", h.HandleReindexTalk)
-}
-
-// RegisterRoutes registers all HTTP routes with the provided mux
-// Deprecated: Use RegisterHealthRoutes and RegisterAPIRoutes separately
-func RegisterRoutes(mux *http.ServeMux, h *Handler) {
-	RegisterHealthRoutes(mux, h)
-	RegisterAPIRoutes(mux, h)
+	// API routes only available in development mode
+	if a.cfg.Mode.IsDevelopment() {
+		mux.HandleFunc("POST /api/reindex", a.HandleReindexAll)
+		mux.HandleFunc("POST /api/reindex/conference/{slug}", a.HandleReindexConference)
+		mux.HandleFunc("POST /api/reindex/talk/{talkId}", a.HandleReindexTalk)
+		slog.Info("API routes enabled (development mode)")
+	} else {
+		slog.Info("API routes disabled (production mode)")
+	}
 }

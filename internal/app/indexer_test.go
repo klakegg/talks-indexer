@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/javaBin/talks-indexer/internal/config"
 	"github.com/javaBin/talks-indexer/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,6 +15,16 @@ const (
 	testPrivateMapping = `{"mappings":{"private":true}}`
 	testPublicMapping  = `{"mappings":{"public":true}}`
 )
+
+// testIndexConfig creates a test config with index names
+func testIndexConfig() *config.Config {
+	return &config.Config{
+		Index: config.IndexConfig{
+			Private: "private",
+			Public:  "public",
+		},
+	}
+}
 
 // mockTalkSource is a mock implementation of ports.TalkSource
 type mockTalkSource struct {
@@ -91,10 +102,40 @@ func (m *mockSearchIndex) IndexExists(ctx context.Context, indexName string) (bo
 }
 
 func TestNewIndexerService(t *testing.T) {
+	t.Run("with context config", func(t *testing.T) {
+		source := &mockTalkSource{}
+		index := &mockSearchIndex{}
+
+		cfg := testIndexConfig()
+		ctx := config.WithConfig(context.Background(), cfg)
+
+		service := NewIndexerService(ctx, source, index, testPrivateMapping, testPublicMapping)
+
+		assert.NotNil(t, service)
+		assert.Equal(t, source, service.source)
+		assert.Equal(t, index, service.searchIndex)
+		assert.Equal(t, "private", service.privateIndex)
+		assert.Equal(t, "public", service.publicIndex)
+		assert.Equal(t, testPrivateMapping, service.privateIndexMapping)
+		assert.Equal(t, testPublicMapping, service.publicIndexMapping)
+	})
+
+	t.Run("panics when config not in context", func(t *testing.T) {
+		source := &mockTalkSource{}
+		index := &mockSearchIndex{}
+		ctx := context.Background()
+
+		assert.Panics(t, func() {
+			NewIndexerService(ctx, source, index, testPrivateMapping, testPublicMapping)
+		})
+	})
+}
+
+func TestNewIndexerServiceWithConfig(t *testing.T) {
 	source := &mockTalkSource{}
 	index := &mockSearchIndex{}
 
-	service := NewIndexerService(source, index, "private", "public", testPrivateMapping, testPublicMapping)
+	service := NewIndexerServiceWithConfig(source, index, "private", "public", testPrivateMapping, testPublicMapping)
 
 	assert.NotNil(t, service)
 	assert.Equal(t, source, service.source)
@@ -127,7 +168,7 @@ func TestReindexAll_Success(t *testing.T) {
 
 	index := &mockSearchIndex{}
 
-	service := NewIndexerService(source, index, "private", "public", testPrivateMapping, testPublicMapping)
+	service := NewIndexerServiceWithConfig(source, index, "private", "public", testPrivateMapping, testPublicMapping)
 	err := service.ReindexAll(context.Background())
 
 	require.NoError(t, err)
@@ -161,7 +202,7 @@ func TestReindexAll_NoConferences(t *testing.T) {
 
 	index := &mockSearchIndex{}
 
-	service := NewIndexerService(source, index, "private", "public", testPrivateMapping, testPublicMapping)
+	service := NewIndexerServiceWithConfig(source, index, "private", "public", testPrivateMapping, testPublicMapping)
 	err := service.ReindexAll(context.Background())
 
 	require.NoError(t, err)
@@ -183,7 +224,7 @@ func TestReindexAll_FetchConferencesError(t *testing.T) {
 
 	index := &mockSearchIndex{}
 
-	service := NewIndexerService(source, index, "private", "public", testPrivateMapping, testPublicMapping)
+	service := NewIndexerServiceWithConfig(source, index, "private", "public", testPrivateMapping, testPublicMapping)
 	err := service.ReindexAll(context.Background())
 
 	require.Error(t, err)
@@ -212,7 +253,7 @@ func TestReindexAll_FetchTalksError_ContinuesWithOtherConferences(t *testing.T) 
 
 	index := &mockSearchIndex{}
 
-	service := NewIndexerService(source, index, "private", "public", testPrivateMapping, testPublicMapping)
+	service := NewIndexerServiceWithConfig(source, index, "private", "public", testPrivateMapping, testPublicMapping)
 	err := service.ReindexAll(context.Background())
 
 	// Should not return error, just log and continue
@@ -247,7 +288,7 @@ func TestReindexConference_Success(t *testing.T) {
 		},
 	}
 
-	service := NewIndexerService(source, index, "private", "public", testPrivateMapping, testPublicMapping)
+	service := NewIndexerServiceWithConfig(source, index, "private", "public", testPrivateMapping, testPublicMapping)
 	err := service.ReindexConference(context.Background(), "javazone2024")
 
 	require.NoError(t, err)
@@ -280,7 +321,7 @@ func TestReindexConference_NotFound(t *testing.T) {
 
 	index := &mockSearchIndex{}
 
-	service := NewIndexerService(source, index, "private", "public", testPrivateMapping, testPublicMapping)
+	service := NewIndexerServiceWithConfig(source, index, "private", "public", testPrivateMapping, testPublicMapping)
 	err := service.ReindexConference(context.Background(), "nonexistent")
 
 	require.Error(t, err)
@@ -307,8 +348,118 @@ func TestReindexConference_CreateIndexIfNotExists(t *testing.T) {
 		},
 	}
 
-	service := NewIndexerService(source, index, "private", "public", testPrivateMapping, testPublicMapping)
+	service := NewIndexerServiceWithConfig(source, index, "private", "public", testPrivateMapping, testPublicMapping)
 	err := service.ReindexConference(context.Background(), "test")
+
+	require.NoError(t, err)
+
+	// Should have created both indexes
+	assert.Contains(t, index.createIndexCalls, "private")
+	assert.Contains(t, index.createIndexCalls, "public")
+}
+
+func TestReindexTalk_ApprovedTalk(t *testing.T) {
+	talk := &domain.Talk{
+		ID:             "talk-1",
+		ConferenceID:   "conf-1",
+		ConferenceSlug: "javazone2024",
+		Status:         "APPROVED",
+		Data:           map[string]interface{}{"title": "Test Talk"},
+	}
+
+	source := &mockTalkSource{
+		getTalkFunc: func(ctx context.Context, talkID string) (*domain.Talk, error) {
+			return talk, nil
+		},
+	}
+
+	index := &mockSearchIndex{
+		indexExistsFunc: func(ctx context.Context, indexName string) (bool, error) {
+			return true, nil
+		},
+	}
+
+	service := NewIndexerServiceWithConfig(source, index, "private", "public", testPrivateMapping, testPublicMapping)
+	err := service.ReindexTalk(context.Background(), "talk-1")
+
+	require.NoError(t, err)
+
+	// Should have indexed to both private and public (since approved)
+	require.Len(t, index.bulkIndexCalls, 2)
+	assert.Equal(t, "private", index.bulkIndexCalls[0].IndexName)
+	assert.Equal(t, "public", index.bulkIndexCalls[1].IndexName)
+}
+
+func TestReindexTalk_NonApprovedTalk(t *testing.T) {
+	talk := &domain.Talk{
+		ID:             "talk-1",
+		ConferenceID:   "conf-1",
+		ConferenceSlug: "javazone2024",
+		Status:         "SUBMITTED",
+		Data:           map[string]interface{}{"title": "Test Talk"},
+	}
+
+	source := &mockTalkSource{
+		getTalkFunc: func(ctx context.Context, talkID string) (*domain.Talk, error) {
+			return talk, nil
+		},
+	}
+
+	index := &mockSearchIndex{
+		indexExistsFunc: func(ctx context.Context, indexName string) (bool, error) {
+			return true, nil
+		},
+	}
+
+	service := NewIndexerServiceWithConfig(source, index, "private", "public", testPrivateMapping, testPublicMapping)
+	err := service.ReindexTalk(context.Background(), "talk-1")
+
+	require.NoError(t, err)
+
+	// Should have indexed only to private (since not approved)
+	require.Len(t, index.bulkIndexCalls, 1)
+	assert.Equal(t, "private", index.bulkIndexCalls[0].IndexName)
+}
+
+func TestReindexTalk_TalkNotFound(t *testing.T) {
+	source := &mockTalkSource{
+		getTalkFunc: func(ctx context.Context, talkID string) (*domain.Talk, error) {
+			return nil, errors.New("talk not found")
+		},
+	}
+
+	index := &mockSearchIndex{}
+
+	service := NewIndexerServiceWithConfig(source, index, "private", "public", testPrivateMapping, testPublicMapping)
+	err := service.ReindexTalk(context.Background(), "nonexistent")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to fetch talk")
+}
+
+func TestReindexTalk_CreateIndexIfNotExists(t *testing.T) {
+	talk := &domain.Talk{
+		ID:             "talk-1",
+		ConferenceID:   "conf-1",
+		ConferenceSlug: "javazone2024",
+		Status:         "SUBMITTED",
+		Data:           map[string]interface{}{"title": "Test Talk"},
+	}
+
+	source := &mockTalkSource{
+		getTalkFunc: func(ctx context.Context, talkID string) (*domain.Talk, error) {
+			return talk, nil
+		},
+	}
+
+	index := &mockSearchIndex{
+		indexExistsFunc: func(ctx context.Context, indexName string) (bool, error) {
+			return false, nil
+		},
+	}
+
+	service := NewIndexerServiceWithConfig(source, index, "private", "public", testPrivateMapping, testPublicMapping)
+	err := service.ReindexTalk(context.Background(), "talk-1")
 
 	require.NoError(t, err)
 

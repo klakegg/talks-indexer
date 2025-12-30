@@ -12,7 +12,7 @@ type HealthResponse struct {
 }
 
 // HandleHealth handles the health check endpoint
-func (h *Handler) HandleHealth(w http.ResponseWriter, r *http.Request) {
+func (a *Adapter) HandleHealth(w http.ResponseWriter, r *http.Request) {
 	response := HealthResponse{
 		Status: "ok",
 	}

@@ -5,8 +5,19 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/javaBin/talks-indexer/internal/config"
 	"github.com/stretchr/testify/assert"
 )
+
+// testContext returns a context with test configuration
+func testContext() context.Context {
+	cfg := &config.Config{
+		ApplicationConfig: config.ApplicationConfig{
+			Mode: config.ModeDevelopment,
+		},
+	}
+	return config.WithConfig(context.Background(), cfg)
+}
 
 // mockIndexer is a mock implementation of the Indexer interface for testing
 type mockIndexer struct {
@@ -36,19 +47,21 @@ func (m *mockIndexer) ReindexTalk(ctx context.Context, talkID string) error {
 	return nil
 }
 
-func TestNewHandler(t *testing.T) {
+func TestNew(t *testing.T) {
+	ctx := testContext()
 	indexer := &mockIndexer{}
-	handler := NewHandler(indexer)
+	adapter := New(ctx, indexer)
 
-	assert.NotNil(t, handler)
-	assert.Equal(t, indexer, handler.indexer)
+	assert.NotNil(t, adapter)
+	assert.Equal(t, indexer, adapter.indexer)
 }
 
-func TestNewHandler_WithNilIndexer(t *testing.T) {
-	handler := NewHandler(nil)
+func TestNew_WithNilIndexer(t *testing.T) {
+	ctx := testContext()
+	adapter := New(ctx, nil)
 
-	assert.NotNil(t, handler)
-	assert.Nil(t, handler.indexer)
+	assert.NotNil(t, adapter)
+	assert.Nil(t, adapter.indexer)
 }
 
 func TestMockIndexer_ReindexAll_Default(t *testing.T) {

@@ -7,17 +7,37 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/javaBin/talks-indexer/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRegisterRoutes(t *testing.T) {
+// testConfigDevelopment creates a test config in development mode
+func testConfigDevelopment() *config.Config {
+	return &config.Config{
+		ApplicationConfig: config.ApplicationConfig{
+			Mode: config.ModeDevelopment,
+		},
+	}
+}
+
+// testConfigProduction creates a test config in production mode
+func testConfigProduction() *config.Config {
+	return &config.Config{
+		ApplicationConfig: config.ApplicationConfig{
+			Mode: config.ModeProduction,
+		},
+	}
+}
+
+func TestRegisterRoutes_DevelopmentMode(t *testing.T) {
+	ctx := config.WithConfig(context.Background(), testConfigDevelopment())
 	indexer := &mockIndexer{}
-	handler := NewHandler(indexer)
+	adapter := New(ctx, indexer)
 	mux := http.NewServeMux()
 
-	RegisterRoutes(mux, handler)
+	adapter.RegisterRoutes(mux)
 
-	// Test that routes are registered by making requests
+	// Test that all routes are registered in development mode
 	tests := []struct {
 		name           string
 		method         string
@@ -67,12 +87,50 @@ func TestRegisterRoutes(t *testing.T) {
 	}
 }
 
-func TestRegisterRoutes_MethodNotAllowed(t *testing.T) {
+func TestRegisterRoutes_ProductionMode(t *testing.T) {
+	ctx := config.WithConfig(context.Background(), testConfigProduction())
 	indexer := &mockIndexer{}
-	handler := NewHandler(indexer)
+	adapter := New(ctx, indexer)
 	mux := http.NewServeMux()
 
-	RegisterRoutes(mux, handler)
+	adapter.RegisterRoutes(mux)
+
+	// Health check should still be available
+	t.Run("GET /health is available", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/health", nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	// API routes should NOT be available in production mode
+	apiRoutes := []struct {
+		name   string
+		method string
+		path   string
+	}{
+		{"POST /api/reindex", http.MethodPost, "/api/reindex"},
+		{"POST /api/reindex/conference/{slug}", http.MethodPost, "/api/reindex/conference/test-conf"},
+		{"POST /api/reindex/talk/{talkId}", http.MethodPost, "/api/reindex/talk/test-talk-id"},
+	}
+
+	for _, tt := range apiRoutes {
+		t.Run(tt.name+" is not available", func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, tt.path, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+			assert.Equal(t, http.StatusNotFound, w.Code)
+		})
+	}
+}
+
+func TestRegisterRoutes_MethodNotAllowed(t *testing.T) {
+	ctx := config.WithConfig(context.Background(), testConfigDevelopment())
+	indexer := &mockIndexer{}
+	adapter := New(ctx, indexer)
+	mux := http.NewServeMux()
+
+	adapter.RegisterRoutes(mux)
 
 	tests := []struct {
 		name   string
@@ -105,11 +163,12 @@ func TestRegisterRoutes_MethodNotAllowed(t *testing.T) {
 }
 
 func TestRegisterRoutes_NotFound(t *testing.T) {
+	ctx := config.WithConfig(context.Background(), testConfigDevelopment())
 	indexer := &mockIndexer{}
-	handler := NewHandler(indexer)
+	adapter := New(ctx, indexer)
 	mux := http.NewServeMux()
 
-	RegisterRoutes(mux, handler)
+	adapter.RegisterRoutes(mux)
 
 	req := httptest.NewRequest(http.MethodGet, "/nonexistent", nil)
 	w := httptest.NewRecorder()
@@ -120,6 +179,8 @@ func TestRegisterRoutes_NotFound(t *testing.T) {
 }
 
 func TestRegisterRoutes_Integration(t *testing.T) {
+	ctx := config.WithConfig(context.Background(), testConfigDevelopment())
+
 	// Create a mock indexer that tracks calls
 	var reindexAllCalled bool
 	var reindexConferenceCalled bool
@@ -137,9 +198,9 @@ func TestRegisterRoutes_Integration(t *testing.T) {
 		},
 	}
 
-	handler := NewHandler(indexer)
+	adapter := New(ctx, indexer)
 	mux := http.NewServeMux()
-	RegisterRoutes(mux, handler)
+	adapter.RegisterRoutes(mux)
 
 	// Test reindex all
 	req := httptest.NewRequest(http.MethodPost, "/api/reindex", nil)

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/javaBin/talks-indexer/internal/config"
 	"github.com/javaBin/talks-indexer/internal/domain"
 )
 
@@ -21,21 +22,23 @@ type Client struct {
 	logger     *slog.Logger
 }
 
-// New creates a new moresleep Client
-// If username and password are provided, Basic Auth will be used for all requests
-func New(baseURL, username, password string) *Client {
+// New creates a new moresleep Client, retrieving configuration from context
+// If username and password are configured, Basic Auth will be used for all requests
+func New(ctx context.Context) (*Client, error) {
+	cfg := config.GetConfig(ctx)
 	return &Client{
-		baseURL:  baseURL,
-		username: username,
-		password: password,
+		baseURL:  cfg.Moresleep.URL,
+		username: cfg.Moresleep.User,
+		password: cfg.Moresleep.Password,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
 		logger: slog.Default(),
-	}
+	}, nil
 }
 
-// NewWithHTTPClient creates a new moresleep Client with a custom HTTP client
+// NewWithHTTPClient creates a new moresleep Client with a custom HTTP client.
+// This constructor is primarily intended for testing purposes.
 func NewWithHTTPClient(baseURL, username, password string, httpClient *http.Client) *Client {
 	return &Client{
 		baseURL:    baseURL,

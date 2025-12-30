@@ -12,6 +12,7 @@ import (
 
 	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/elastic/go-elasticsearch/v9/esapi"
+	"github.com/javaBin/talks-indexer/internal/config"
 	"github.com/javaBin/talks-indexer/internal/domain"
 )
 
@@ -21,10 +22,49 @@ type Client struct {
 	logger *slog.Logger
 }
 
-// New creates a new Elasticsearch client.
-// The elasticsearchURL parameter should be the full URL to the Elasticsearch cluster (e.g., "http://localhost:9200").
-// Username and password are optional - pass empty strings for unauthenticated connections.
-func New(elasticsearchURL, username, password string) (*Client, error) {
+// New creates a new Elasticsearch client, retrieving configuration from context.
+func New(ctx context.Context) (*Client, error) {
+	appCfg := config.GetConfig(ctx)
+
+	esCfg := elasticsearch.Config{
+		Addresses: []string{appCfg.Elasticsearch.URL},
+	}
+
+	// Add authentication if credentials are provided
+	if appCfg.Elasticsearch.HasCredentials() {
+		esCfg.Username = appCfg.Elasticsearch.User
+		esCfg.Password = appCfg.Elasticsearch.Password
+	}
+
+	es, err := elasticsearch.NewClient(esCfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create elasticsearch client: %w", err)
+	}
+
+	// Verify connection
+	res, err := es.Info()
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to elasticsearch: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.IsError() {
+		body, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf("elasticsearch connection error: %s - %s", res.Status(), string(body))
+	}
+
+	logger := slog.Default().With("component", "elasticsearch")
+	logger.Info("connected to elasticsearch", "url", appCfg.Elasticsearch.URL, "authenticated", appCfg.Elasticsearch.HasCredentials())
+
+	return &Client{
+		es:     es,
+		logger: logger,
+	}, nil
+}
+
+// NewWithURL creates a new Elasticsearch client with explicit URL and credentials.
+// This constructor is primarily intended for testing purposes.
+func NewWithURL(elasticsearchURL, username, password string) (*Client, error) {
 	cfg := elasticsearch.Config{
 		Addresses: []string{elasticsearchURL},
 	}

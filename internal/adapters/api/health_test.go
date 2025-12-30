@@ -11,16 +11,17 @@ import (
 )
 
 func TestHandleHealth(t *testing.T) {
-	// Create handler with mock indexer
+	// Create adapter with mock indexer
+	ctx := testContext()
 	indexer := &mockIndexer{}
-	handler := NewHandler(indexer)
+	adapter := New(ctx, indexer)
 
 	// Create request
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	w := httptest.NewRecorder()
 
 	// Call handler
-	handler.HandleHealth(w, req)
+	adapter.HandleHealth(w, req)
 
 	// Assert response
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -35,26 +36,28 @@ func TestHandleHealth(t *testing.T) {
 }
 
 func TestHandleHealth_ContentType(t *testing.T) {
+	ctx := testContext()
 	indexer := &mockIndexer{}
-	handler := NewHandler(indexer)
+	adapter := New(ctx, indexer)
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	w := httptest.NewRecorder()
 
-	handler.HandleHealth(w, req)
+	adapter.HandleHealth(w, req)
 
 	contentType := w.Header().Get("Content-Type")
 	assert.Equal(t, "application/json", contentType)
 }
 
 func TestHandleHealth_StatusCode(t *testing.T) {
+	ctx := testContext()
 	indexer := &mockIndexer{}
-	handler := NewHandler(indexer)
+	adapter := New(ctx, indexer)
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	w := httptest.NewRecorder()
 
-	handler.HandleHealth(w, req)
+	adapter.HandleHealth(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 }

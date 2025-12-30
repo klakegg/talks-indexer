@@ -3,32 +3,30 @@ package web
 import (
 	"net/http"
 
-	"github.com/javaBin/talks-indexer/internal/adapters/auth"
 	"github.com/javaBin/talks-indexer/internal/adapters/web/handlers"
+	"github.com/javaBin/talks-indexer/internal/ports"
 )
 
-// RegisterRoutes registers all web routes with the provided mux (no auth)
-func RegisterRoutes(mux *http.ServeMux, h *handlers.Handler) {
-	// Admin dashboard
-	mux.HandleFunc("GET /admin", h.HandleDashboard)
+// MiddlewareFunc is a function that wraps a handler with middleware
+type MiddlewareFunc func(http.Handler) http.Handler
 
-	// htmx endpoints for reindex operations
-	mux.HandleFunc("POST /admin/reindex/all", h.HandleReindexAll)
-	mux.HandleFunc("POST /admin/reindex/conference", h.HandleReindexConference)
-	mux.HandleFunc("POST /admin/reindex/talk", h.HandleReindexTalk)
+// Adapter holds the web adapter dependencies
+type Adapter struct {
+	handler *handlers.Handler
 }
 
-// RegisterProtectedRoutes registers admin routes protected by auth middleware
-func RegisterProtectedRoutes(mux *http.ServeMux, h *handlers.Handler, authMiddleware *auth.Middleware) {
-	// Create handlers wrapped with auth middleware
-	protectedDashboard := authMiddleware.RequireAuth(http.HandlerFunc(h.HandleDashboard))
-	protectedReindexAll := authMiddleware.RequireAuth(http.HandlerFunc(h.HandleReindexAll))
-	protectedReindexConf := authMiddleware.RequireAuth(http.HandlerFunc(h.HandleReindexConference))
-	protectedReindexTalk := authMiddleware.RequireAuth(http.HandlerFunc(h.HandleReindexTalk))
+// New creates a new web adapter
+func New(indexer ports.Indexer, provider ports.ConferenceProvider) *Adapter {
+	return &Adapter{
+		handler: handlers.NewHandler(indexer, provider),
+	}
+}
 
-	// Register protected routes
-	mux.Handle("GET /admin", protectedDashboard)
-	mux.Handle("POST /admin/reindex/all", protectedReindexAll)
-	mux.Handle("POST /admin/reindex/conference", protectedReindexConf)
-	mux.Handle("POST /admin/reindex/talk", protectedReindexTalk)
+// RegisterRoutes registers all web routes with the provided mux.
+// All routes are wrapped with the provided middleware (auth or passthrough).
+func (a *Adapter) RegisterRoutes(mux *http.ServeMux, middleware MiddlewareFunc) {
+	mux.Handle("GET /admin", middleware(http.HandlerFunc(a.handler.HandleDashboard)))
+	mux.Handle("POST /admin/reindex/all", middleware(http.HandlerFunc(a.handler.HandleReindexAll)))
+	mux.Handle("POST /admin/reindex/conference", middleware(http.HandlerFunc(a.handler.HandleReindexConference)))
+	mux.Handle("POST /admin/reindex/talk", middleware(http.HandlerFunc(a.handler.HandleReindexTalk)))
 }
